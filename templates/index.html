@@ -26,6 +26,20 @@ body {
   font-family: 'Roboto', sans-serif;
 }
 
+#fade {
+    display: none;
+    position:absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;
+    z-index: 2;
+    -moz-opacity: 0.9;
+    opacity: 0.75;
+    filter: alpha(opacity=90);
+}
+
 .concept_label {
   width:200px;
   height:20px;
@@ -58,6 +72,18 @@ body {
   left: 0;
 }
 
+.concept_button {
+  font-size: 10px;
+  padding: 2px;
+  margin:2px;
+}
+
+#concept_column {
+  position: absolute;
+  bottom:100px;
+  z-index:3;
+}
+
 #viewer {
   position: fixed;
   bottom:0px;
@@ -85,14 +111,11 @@ body {
 label {
     font: 12px sans-serif;
 }
-.node circle {
-    fill: #fff;
-    stroke: steelblue;
-    stroke-width: 1.5px;
-}
+
 .node {
     font: 10px sans-serif;
 }
+
 .link {
     fill: none;
     stroke-width: 1.5px;
@@ -103,11 +126,6 @@ label {
 <h3 style="padding-left:15px">Cognitive Concept Association with Region {{region_name}}</h3>
 
 <div id="voxel" class="visual"></div>
-<form>
-  <label><input type="radio" name="mode" value="tree" checked>Tree</label>
-  <label><input type="radio" name="mode" value="cluster">Cluster</label>
-</form>
-
 
 <!-- Menu in top right -->
 <div class="mdl-card__menu">
@@ -116,24 +134,39 @@ label {
          <div class="mdl-card__actions">
 
              <button class="mdl-button mdl-button--icon mdl-button--colored mdl-js-ripple-effect" id="save_as_svg" value="" onclick="save_svg()"><i class="material-icons">save</i></button>
+             <button class="mdl-button mdl-button--icon mdl-button--colored mdl-js-ripple-effect" id="show_concept_panel" value="" onclick="show_concept_panel()"><i class="material-icons">find_in_page</i></button>
              <button id="about" class="mdl-button mdl-button--icon mdl-button--colored mdl-js-button mdl-js-ripple-effect" id="save_as_svg" value=""><i class="material-icons">info</i></button>
-             <button id="fullscreen" class="mdl-button mdl-button--icon mdl-button--colored mdl-js-button mdl-js-ripple-effect" id="save_as_svg" value=""><i class="material-icons">fullscreen</i></button>
              <button class="mdl-button mdl-button--icon mdl-button--colored mdl-js-ripple-effect" id="github" value=""><i class="material-icons">code</i></button>
          </div>
 
 
 </div>
 
+<div id="fade"></div>
+
 <div class="mdl-grid">
+
+  <!-- Concepts Selection -->
+  <div class="mdl-cell mdl-cell--12-col" id="concept_panel" style="display:none; padding:20px">
+      <div class="visual" id="concept_column">
+             <button class="mdl-button mdl-button--icon mdl-button--colored mdl-js-ripple-effect" id="show_concept_panel" style="float:right;margin-right:50px" value="" onclick="show_concept_panel()"><i class="material-icons">close</i></button>
+          <h2 class="mdl-card__title-text" style="padding-bottom:20px;">Cognitive Concept Highligher</h2>
+          <div id="concepts"></div> <!--Concepts will be appended here-->
+      </div>
+  </div>
 
   <!-- About Concent -->
   <div class="mdl-cell mdl-cell--12-col" id="about_info" style="display:none; padding:20px">
       <h4>What am I looking at?</h4>
-     You are looking at the relative contribution of different cognitive concepts for a single location in the brain, an x,y,z coordinate called a "voxel." Each circle represents a statistical brain map result for a particular task and cognitive concept, colored by the value in the original brain map (reds are more positive, blues more negative) and sized (larger to smaller) for the same dimension. If you mouse over a node, the cognitive concepts relevant to the image will light up in the bottom right. If you mouse over a cognitive concept, the associated nodes will be highlighted.<br>
+     You are looking at a cognitive concept tree that shows the relative contribution of different cognitive concepts for a single location in the brain, an x,y,z coordinate called a "voxel" to a model generated at the voxel. Each circle represents a single cognitive concept, <strong>colored</strong> to indicate its importance for the voxel's model (darker = more important, <span style="color:cornflowerblue">blue</span> = positive weight, <span style="color:orangered">red</span> = negative weight), and <strong>sized</strong> by the number of statistical brain maps with the label that contributed to the model result.<br>
      <h4>What do you mean "relative contribution?"</h4>
-      We used a bunch a brain maps labeled with <a href="http://www.cognitiveatlas.org">cognitive concepts</a> to generate a sparse Logistic Regression model at each voxel (think an x,y,z coordinate in a 3D brain map), meaning that we found an optimal weighting of each cognitive concept to predict the voxel values across a large set of images. You are looking at the "relative contribution" (e.g., importance) of each concept for a particular voxel, represented by the weight (the beta or regression parameter) produced by the model. 
+      We used a bunch a brain maps labeled with <a href="http://www.cognitiveatlas.org">cognitive concepts</a> to generate a sparse Logistic Regression model at each voxel (think an x,y,z coordinate in a 3D brain map), meaning that we found an optimal weighting of each cognitive concept to predict the voxel values across a large set of images. You are looking at the "relative contribution" (e.g., importance) of each concept for a particular voxel, represented by the weight (the beta or regression parameter) produced by the model. This importance is represented in color, and you will notice many faint or completely white nodes. Although these concepts exist, they were not relevant to the voxel's model. 
      <h4>What do these voxel-wise models do?</h4>
-     Having a model at each voxel means that we can use cognitive concepts to predict brain maps, and predict cognitive concepts from a new brain map. The model is sparse because the algorithm sets the weights of as many of the regression parameters (one for each cognitive concept) to zero. Thus, although there are a total 132 cognitive concepts, you will only see a subset in the list at the bottom right for each region.
+     Having a model at each voxel means that we can use cognitive concepts to predict brain maps, and predict cognitive concepts from a new brain map. The model is sparse because the algorithm sets the weights of as many of the regression parameters (one for each cognitive concept) to zero. Thus, although there are a total 132 cognitive concepts, you will only see a small number of strongly blue or red nodes.
+     <h4>How do I find concepts?</h4>
+     Use our Concept Explorer button in the top right to select concepts you are interested in, and they will be <span style="background-color:aqua">highlighted</span> in the tree.
+     <h4>Why aren't all of the nodes labeled?</h4>
+     Nodes with an importance value greater than a threshold of 0.5 and having more than 15 associated images are labeled automatically to not clutter the visualization. If you want more info on a node, simply mouse over it to see. If you want to view the concept in the Cognitive Atlas, simply click the node.
      <h4>How do I explore different regions?</h4>
      If you use the region selector in the bottom left, you will be taken to a random voxel within the region. Some regions are very large, meaning the model looks very different between voxels in the same region, and for this reason we encourage you to reload the same region multiple times to see the variance. Brain regions correspond to randomly selected MNI (x,y,z) coordinates from the <a href="http://www.gin.cnrs.fr/AAL2" target="_blank">AAL2</a> atlas <a href="https://nilearn.github.io/modules/generated/nilearn.image.resample_img.html" target="_blank">resampled</a> to 4mm with nearest interpolation. Data and labels were obtained courtesy of <a href="http://www.neurovault.org/images/14255/" target="_blank">NeuroVault</a>. Full script to generate coordinates <a href="https://github.com/vsoch/cogat_voxel/blob/master/script/generate_aal_lookup.py" target="_blank">is available</a>.
 
@@ -158,7 +191,7 @@ label {
               All code for this visualization is publicly available. 
           </div>
           <div class="mdl-card__actions mdl-card--border">
-             <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" href="http://www.github.com/vsoch/cogat_voxel" target="_blank">
+             <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" href="http://www.github.com/vsoch/cogatvoxel" target="_blank">
              View Code
              </a>
           </div>
@@ -175,7 +208,7 @@ label {
               You can run the entire app via a Docker container. 
           </div>
           <div class="mdl-card__actions mdl-card--border">
-             <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" href="https://hub.docker.com/r/vanessa/cogatvoxel/" target="_blank">
+             <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" href="https://hub.docker.com/r/vanessa/cogatvoxeltree/" target="_blank">
              Docker Hub
            </a>
          </div>
@@ -192,7 +225,6 @@ label {
 
   <!-- Voxel Selector -->
   <div class="mdl-cell mdl-cell--3-col visual" id="region_column">
-      <h2 class="mdl-card__title-text" style="padding-top:20px">Region Selector</h2>
 
           <span id="region_header">Choose a brain region</span>
           <select id="region_list" class="mdl-menu mdl-menu--bottom-left mdl-js-menu mdl-js-ripple-effect" for="region-menu">    
@@ -200,9 +232,25 @@ label {
               <option value="{{ region.name }}">{{ region.name }}</option>
           {% endfor %}
           </select>
+
   </div>
 
-  <!-- Brain Image Viewer -->  
+  <!-- Tree or Graph Selector -->
+  <div class="mdl-cell mdl-cell--3-col visual" style="" id="mode_column">
+      <form>
+          <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="option-1">
+              <input type="radio" id="option-1" class="mdl-radio__button" name="mode" value="cluster">
+              <span class="mdl-radio__label">Cluster</span>
+          </label>
+          <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="option-2">
+              <input type="radio" id="option-2" class="mdl-radio__button" name="mode" value="tree" checked>
+              <span class="mdl-radio__label">Tree</span>
+          </label>
+      </form>
+  </div>
+
+
+  <!-- Brain Image Viewer (not currently implemented) -->  
   <div class="mdl-cell mdl-cell--3-col visual" id="brain_column">
       <a href="#" id="neurovault" target="_blank">
           <img id="brainmap" href="#"/>
@@ -212,12 +260,6 @@ label {
           Brain regions correspond to MNI (x,y,z) coordinates from the <a href="http://www.gin.cnrs.fr/AAL2" target="_blank">AAL2</a> atlas <a href="https://nilearn.github.io/modules/generated/nilearn.image.resample_img.html" target="_blank">resampled</a> to 4mm with nearest interpolation. Coordinates represent the <a href="http://nilearn.github.io/modules/generated/nilearn.plotting.find_xyz_cut_coords.html" target="_blank">largest connected component</a>. Data and labels were obtained courtesy of <a href="http://www.neurovault.org/images/14255/" target="_blank">NeuroVault</a>. Full script to generate coordinates <a href="https://github.com/vsoch/cogat_voxel/blob/master/script/generate_aal_lookup.py" target="_blank">is available</a>.
       </div>
 
-  </div>
-
-  <!-- Concept List -->
-  <div class="mdl-cell mdl-cell--6-col visual" id="concept_column">
-      <h2 class="mdl-card__title-text" style="padding-bottom:20px">Cognitive Concepts</h2>
-      <div id="concepts"></div> <!--Concepts will be appended here-->
   </div>
 
 </div>
@@ -307,7 +349,7 @@ function transitionToTree() {
     link.data(links)
         .transition()
         .duration(duration)
-        .style("stroke", "#e78ac3")
+        .style("fill","white")
         .attr("d", diagonal); // get the new tree path
 
     node.data(nodes)
@@ -330,12 +372,14 @@ function transitionToCluster() {
         links = cluster.links(nodes);
     
     svg.transition().duration(duration)
-        .attr("transform", "translate(40,0)");
+        .style("height",height-200)
+        .style("width",width-100)
+        .attr("transform", "translate(0,-100)");
   
     link.data(links)
         .transition()
         .duration(duration)
-        .style("stroke", "#8da0cb")
+        .style("fill","none")
         .attr("d", diagonal); //get the new cluster path
 
     node.data(nodes)
@@ -351,6 +395,15 @@ function transitionToCluster() {
         .style("stroke", "#e41a1c");
     
 };
+
+// Tooltips
+var tip = d3.tip()
+      .attr('class', 'd3-tip')
+      .offset([-10, 0])
+      .html(function(d) {
+return "<strong>concept:</strong><span style='color:tomato'> " + d.name + "</span><br><strong>weight:</strong><span style='color:yellow'> " + regparams[d.nid] + "</span><br><strong>number images:</strong><span style='color:orange'> " + counts[d.nid] + "</span><br><strong>id:</strong><span style='color:cornflowerblue'> " + d.nid + "</span>";
+    })
+    
 
 var root;
 
@@ -398,6 +451,7 @@ var svg = d3.select("#voxel").append("svg")
         .attr("stroke",function(d){
             return nodecolor(regparams[d.target.nid])
          })
+        .style("fill","white")
         .attr("d", diagonal);
 
     var node = svg.selectAll(".node")
@@ -409,7 +463,10 @@ var svg = d3.select("#voxel").append("svg")
         return "translate(" + d.x + "," + d.y + ")";
     })
 
-    node.append("circle")
+    node.append("svg:a")
+         .attr("xlink:href", function(d){return "http://www.cognitiveatlas.org/term/id/" + d.nid;})
+         .attr("target","_blank")
+      .append("circle")
         .attr("r", function(d){
           var count = counts[d.nid]; 
           if (count != undefined){
@@ -426,36 +483,58 @@ var svg = d3.select("#voxel").append("svg")
         .style("opacity",function(d){
             return opacity(regparams[d.nid])
         })
+       .on('mouseout.tip', tip.hide)
+       .attr("class", function(d) { return d.nid })
+       .on('mouseover.tip', tip.show)
+       .on('mouseover.img',function(d){
+          $("#brainmap").attr("src",d.thumbnail)
+          $("#neurovault").attr("href","http://www.neurovault.org/images/" + d.uid)
+        })
+    
 
-
-           
-/*
-    node.append("text")
+    // Add concept labels
+    var labels = node.append("text")
         .attr("dx", function (d) { return d.children ? -8 : 8; })
-        .attr("dy", 3)
+        .attr("dy", 0)
+        .style("font","14px sans-serif")
         .style("text-anchor", function (d) { return d.children ? "end" : "start"; })
-        .text(function (d) { return d.name; });
+        .html(function(d) { 
+            // Only show label for larger nodes with regression parameter >= +/- 0.5
+            if ((counts[d.nid]>=15) && (Math.abs(regparams[d.nid])>=0.5)) {
+                return d.name
+            }
+         });
+    
 
-*/
-
+svg.call(tip);       
 
 // Contrasts
 $.each(colors, function(concept_id, color) {
    var concept_name = lookup[concept_id] 
      $("#concepts").append('<button name="'+ concept_id +'" class="concept_button mdl-button mdl-js-button mdl-js-ripple-effect">'+ concept_name +'</button>')
-   //$("#concepts").append("<div class='concept_label' style='background-color:" + color +";'>"+ concept_name +"</div>")
 });
 
 // Function to highlight contrasts on click
-$(".concept_button").mouseover(function() {
+$(".concept_button").click(function() {
     var concept = $(this).attr("name");
-    $("."+concept).css("stroke","aqua")
+    if ($("."+concept).hasClass("highlight")){
+        $("."+concept).css("stroke-width",1)
+        $("."+concept).css("fill",nodecolor(regparams[concept]))
+        $("."+concept).css("stroke",nodecolor(regparams[concept]))
+        $("."+concept).css("opacity",opacity(regparams[concept]))
+        $("."+concept).removeClass("highlight")    
+        $(this).css("background-color","white")
+    } else {
+        $("."+concept).css("stroke","aqua")
+        $("."+concept).css("stroke-width",5)
+        $("."+concept).css("fill","aqua")
+        $("."+concept).css("opacity",1)
+        $("."+concept).css("stroke-opacity",1)
+        $("."+concept).addClass("highlight")
+        $(this).css("background-color","aqua")
+    }
 });
 
-$(".concept_button").mouseout(function() {
-    var concept = $(this).attr("name");
-    $("."+concept).css("stroke","none")    
-});
 
 //  BUTTONS !! //
 
@@ -492,18 +571,16 @@ $("#github").click(function(){
     $(".visual").toggle();
 })
 
-// Fullscreen option
-$("#fullscreen").click(function(){
-    if ($("svg").attr("height") == {{height}}){
-        $("svg").attr("height",$("body").height())
-        $(".origin").attr("y2",$("body").height())
-        $(".label").attr("y",$("body").height()-5)
+// Show concept panel on click
+function show_concept_panel(evt) {
+    if ($("#concept_panel").attr("display")=="none"){
+        $("#fade").toggle()
+        $("#concept_panel").slideToggle("slow")
     } else {
-        $("svg").attr("height",{{ height }})
-        $(".origin").attr("y2",{{ height }})
-        $(".label").attr("y",{{ height }}-5)
+        $("#concept_panel").toggle()
+        $("#fade").toggle()    
     }
-})
+}
 
 // On region selection, navigation to new page
 $('#region_list').on("change", function(e) { 
