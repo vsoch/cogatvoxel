@@ -236,7 +236,7 @@ label {
 
   </div>
 
-  <!-- Tree or Graph Selector -->
+  <!-- Tree or Graph Selector 
   <div class="mdl-cell mdl-cell--3-col visual" style="" id="mode_column">
       <form>
           <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="option-1">
@@ -249,7 +249,7 @@ label {
           </label>
       </form>
   </div>
-
+  -->
 
   <!-- Brain Image Viewer (not currently implemented) -->  
   <div class="mdl-cell mdl-cell--3-col visual" id="brain_column">
@@ -272,6 +272,7 @@ var counts = {{ counts | safe }}
 var spatial = {{ spatial | safe }}     //spatial similarity matrix, as json
 var colors = {{ colors | safe }}
 var lookup = {{ lookup | safe }}
+var margin = {top: 0, right: 20, bottom: 15, left: 150}
 
 var width = {{ width }},
     height = {{ height }},
@@ -305,26 +306,6 @@ var opacity = d3.scale.linear()
     .domain([{{min}}, 0,{{max}}])
     .range([1,0,1]);
 
-var nodes = d3.range(n).map(function(idx) {
-  node = data[idx];
-  i = regparams[node.concept]
-  return {
-    radius: node.radius, // related to voxel value
-    task: node.task,
-    concept_id: node.concept,
-    concept: node.concept_name,
-    contrast: node.contrast,
-    classes: node.classes,
-    collection: node.collection,
-    thumbnail: node.thumbnail,
-    color: color(node.value),
-    //color: colors[node.concept],
-    uid: node.uid,
-    x: x(i),
-    y: height / 2
-  };
-});
-
 var diameter = height / 2;
 var duration = 2000;
 
@@ -345,7 +326,7 @@ function transitionToTree() {
         links = tree.links(nodes);
 
     svg.transition().duration(duration)
-        .attr("transform", "translate(40,0)");
+        .attr("transform", "translate(0,40)");
         
     link.data(links)
         .transition()
@@ -397,6 +378,42 @@ function transitionToCluster() {
     
 };
 
+// Function to arrange labels http://bl.ocks.org/larskotthoff/11406992
+function arrangeLabels() {
+  var move = 1;
+  while(move > 0) {
+    move = 0;
+    svg.selectAll(".concept-label")
+       .each(function() {
+         var that = this,
+             a = this.getBoundingClientRect();
+         svg.selectAll(".concept-label")
+            .each(function() {
+              if(this != that) {
+                var b = this.getBoundingClientRect();
+                if((Math.abs(a.left - b.left) * 2 < (a.width + b.width)) &&
+                   (Math.abs(a.top - b.top) * 2 < (a.height + b.height))) {
+                  // overlap, move labels
+                  var dx = (Math.max(0, a.right - b.left) +
+                           Math.min(0, a.left - b.right)) * 0.01,
+                      dy = (Math.max(0, a.bottom - b.top) +
+                           Math.min(0, a.top - b.bottom)) * 0.02,
+                      tt = d3.transform(d3.select(this).attr("transform")),
+                      to = d3.transform(d3.select(that).attr("transform"));
+                  move += Math.abs(dx) + Math.abs(dy);
+                
+                  to.translate = [ to.translate[0] + dx, to.translate[1] + dy ];
+                  tt.translate = [ tt.translate[0] - dx, tt.translate[1] - dy ];
+                  d3.select(this).attr("transform", "translate(" + tt.translate + ")");
+                  d3.select(that).attr("transform", "translate(" + to.translate + ")");
+                  a = this.getBoundingClientRect();
+                }
+              }
+            });
+       });
+  }
+}
+
 // Tooltips
 var tip = d3.tip()
       .attr('class', 'd3-tip')
@@ -420,14 +437,16 @@ function separation(a, b) {
   return a.parent == b.parent ? 1 : 2;
 }
 
+var plotwidth = width - margin.left - margin.right,
+    plotheight = height - margin.top - margin.bottom
+
 var tree = d3.layout.tree()
     .sort(comparator)
-    .size([width,height]);
-
+    .size([plotwidth,plotheight]);
 
 var cluster = d3.layout.cluster()
     .sort(comparator)
-    .size([width,height]);
+    .size([plotwidth,plotheight]);
 
 var diagonal = d3.svg.diagonal()
     .projection(function (d) {
@@ -436,9 +455,10 @@ var diagonal = d3.svg.diagonal()
 
 
 var svg = d3.select("#voxel").append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .append("g")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var root = {{ tree | safe }},
         nodes = tree.nodes(root),
@@ -486,17 +506,13 @@ var svg = d3.select("#voxel").append("svg")
         })
        .on('mouseout.tip', tip.hide)
        .attr("class", function(d) { return d.nid })
-       .on('mouseover.tip', tip.show)
-       .on('mouseover.img',function(d){
-          $("#brainmap").attr("src",d.thumbnail)
-          $("#neurovault").attr("href","http://www.neurovault.org/images/" + d.uid)
-        })
-    
+       .on('mouseover.tip', tip.show)    
 
     // Add concept labels
     var labels = node.append("text")
-        .attr("dx", function (d) { return d.children ? -8 : 8; })
+        .attr("dx", function (d) { return d.children ? -2 : 2; })
         .attr("dy", 0)
+        .classed("concept-label",true)
         .style("font","14px sans-serif")
         .style("text-anchor", function (d) { return d.children ? "end" : "start"; })
         .html(function(d) { 
@@ -505,8 +521,8 @@ var svg = d3.select("#voxel").append("svg")
                 return d.name
             }
          });
-    
 
+arrangeLabels(); // non overlapping labels
 svg.call(tip);       
 
 // Contrasts
